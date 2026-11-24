@@ -7,51 +7,38 @@
     <!-- iOS PWA Optimierungen -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ObsKlicker">
+    <meta name="apple-mobile-web-app-title" content="Klicker">
     <meta name="theme-color" content="#0f172a">
     
     <title>Observations-Klicker</title>
     
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            dark: '#0f172a',
-                            panel: '#1e293b',
-                            catA: '#0284c7',   // Schieferblau / Sky
-                            catB: '#059669',   // Petrol / Smaragd
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
     <style>
-        /* Verhindert unbeabsichtigtes Zoomen, Textmarkieren & Kontextmenüs auf iOS/Android */
-        * {
+        /* CSS Reset & Base Dark Mode */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Numerische Zahlenbündigkeit */
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #020617; /* slate-950 */
+            color: #f8fafc; /* slate-50 */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
         .tabular-nums {
             font-variant-numeric: tabular-nums;
         }
 
-        /* Safe Area Padding für neuere iPhones mit Notch/Dynamic Island */
+        /* Safe Areas für moderne iPhones (Notch/Dynamic Island) */
         .safe-top {
             padding-top: env(safe-area-inset-top, 12px);
         }
@@ -59,343 +46,368 @@
             padding-bottom: env(safe-area-inset-bottom, 12px);
         }
 
-        /* Blitz-Animation für Klick-Feedback */
+        /* Flex & Grid Hilfsklassen */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1 1 0%; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-2 { gap: 0.5rem; }
+        .space-x-1 > * + * { margin-left: 0.25rem; }
+        .space-x-2 > * + * { margin-left: 0.5rem; }
+        .space-y-2 > * + * { margin-top: 0.5rem; }
+        .space-y-3 > * + * { margin-top: 0.75rem; }
+        .space-y-4 > * + * { margin-top: 1rem; }
+
+        /* Topbar & Buttons */
+        header {
+            background-color: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            padding: 0.5rem 0.75rem;
+            z-index: 20;
+        }
+
+        .btn-icon {
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: inline-flex;
+            items-center: center;
+            justify-content: center;
+            transition: background-color 0.15s ease;
+        }
+        .btn-icon:active { background-color: #334155; }
+        .btn-icon:disabled { opacity: 0.3; pointer-events: none; }
+
+        /* Zählflächen */
+        .counter-btn {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            border: 2px solid transparent;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.05s ease, border-color 0.15s ease;
+        }
+        .counter-btn:active {
+            transform: scale(0.99);
+        }
+
+        .btn-cat-a {
+            background: linear-gradient(135deg, rgba(8, 47, 73, 0.95), #0f172a);
+            border-color: rgba(2, 132, 199, 0.4);
+        }
+        .btn-cat-a:active { border-color: #38bdf8; }
+
+        .btn-cat-b {
+            background: linear-gradient(135deg, rgba(69, 26, 3, 0.95), #0f172a);
+            border-color: rgba(217, 119, 6, 0.4);
+        }
+        .btn-cat-b:active { border-color: #fbbf24; }
+
+        /* Flash Animation */
         @keyframes flashEffect {
-            0% { opacity: 0.5; }
+            0% { opacity: 0.6; }
             100% { opacity: 0; }
         }
-        .animate-flash {
-            animation: flashEffect 0.15s ease-out forwards;
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .animate-flash-a { background-color: #38bdf8; animation: flashEffect 0.15s ease-out forwards; }
+        .animate-flash-b { background-color: #fbbf24; animation: flashEffect 0.15s ease-out forwards; }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-card {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 36rem;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* Scrollbar-Design im Log-Modal */
-        ::-webkit-scrollbar {
-            width: 6px;
+        .hidden { display: none !important; }
+
+        /* Inputs & Form */
+        input[type="text"], select {
+            width: 100%;
+            background-color: #020617;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            outline: none;
         }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
+        input[type="text"]:focus, select:focus {
+            border-color: #0284c7;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 3px;
-        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden antialiased" oncontextmenu="return false;">
+<body class="flex flex-col">
 
-    <!-- ================= TOP BAR (Kompakte Kontrollleiste) ================= -->
-    <header class="bg-slate-900 border-b border-slate-800 safe-top px-3 py-2 flex items-center justify-between shadow-md z-20 shrink-0">
-        <!-- Sitzung & Zählerstand -->
-        <div class="flex items-center space-x-2 overflow-hidden mr-2">
-            <div class="bg-slate-800 p-1.5 rounded-lg text-slate-300">
-                <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+    <!-- TOPBAR -->
+    <header class="safe-top flex items-center justify-between">
+        <div class="flex items-center space-x-2 overflow-hidden">
+            <div style="background: #1e293b; padding: 0.35rem; border-radius: 0.5rem; color: #94a3b8;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
             </div>
-            <div class="truncate">
-                <h1 id="header-session-name" class="text-xs font-semibold text-slate-300 truncate max-w-[120px] sm:max-w-[200px]">Beobachtung_01</h1>
-                <p class="text-[10px] text-slate-400">Gesamt: <span id="header-total-count" class="font-bold text-slate-100 tabular-nums">0</span> Klicks</p>
+            <div style="min-width: 0;">
+                <h1 id="header-session-name" style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">Beobachtung_01</h1>
+                <p style="font-size: 0.7rem; color: #94a3b8;">Gesamt: <span id="header-total-count" class="tabular-nums" style="font-weight: 700; color: #f8fafc;">0</span> Klicks</p>
             </div>
         </div>
 
-        <!-- Aktions-Buttons -->
-        <div class="flex items-center space-x-1.5">
-            <!-- Rückgängig -->
-            <button id="btn-undo" onclick="undoLastClick()" title="Letzten Klick rückgängig machen"
-                    class="p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-amber-400 disabled:opacity-30 disabled:pointer-events-none transition">
-                <i data-lucide="undo-2" class="w-4 h-4"></i>
+        <div class="flex items-center space-x-1">
+            <!-- Undo -->
+            <button id="btn-undo" onclick="undoLastClick()" class="btn-icon" title="Rückgängig" style="color: #fbbf24;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
             </button>
 
-            <!-- Display Wach-Halten (Wake Lock) -->
-            <button id="btn-wakelock" onclick="toggleWakeLock()" title="Bildschirm wach halten"
-                    class="p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-slate-400 transition flex items-center space-x-1">
-                <i data-lucide="sun-off" id="icon-wakelock" class="w-4 h-4"></i>
-                <span id="badge-wakelock" class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>
+            <!-- Wake Lock -->
+            <button id="btn-wakelock" onclick="toggleWakeLock()" class="btn-icon" title="Display wach halten">
+                <svg id="icon-wakelock" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+                <span id="badge-wakelock" style="width: 6px; height: 6px; border-radius: 50%; background: #64748b; margin-left: 4px; display: inline-block;"></span>
             </button>
 
-            <!-- Tastensperre Toggle -->
-            <button id="btn-lock" onclick="toggleLock()" title="Tastensperre"
-                    class="p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-slate-400 transition">
-                <i data-lucide="lock-open" id="icon-lock" class="w-4 h-4"></i>
+            <!-- Tastensperre -->
+            <button id="btn-lock" onclick="toggleLock()" class="btn-icon" title="Tastensperre">
+                <svg id="icon-lock" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             </button>
 
-            <div class="h-4 w-px bg-slate-800 mx-0.5"></div>
+            <div style="height: 16px; width: 1px; background: #334155; margin: 0 4px;"></div>
 
-            <!-- Zeitprofil / Protokoll -->
-            <button onclick="openModal('modal-analytics')" title="Zeitprofil & Protokoll"
-                    class="p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-sky-400 transition flex items-center">
-                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+            <!-- Protokoll & Analytics -->
+            <button onclick="openModal('modal-analytics')" class="btn-icon" title="Protokoll" style="color: #38bdf8;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             </button>
 
-            <!-- Setup & Export -->
-            <button onclick="openModal('modal-settings')" title="Export & Setup"
-                    class="p-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-emerald-400 transition flex items-center">
-                <i data-lucide="settings" class="w-4 h-4"></i>
+            <!-- Export & Setup -->
+            <button onclick="openModal('modal-settings')" class="btn-icon" title="Setup & Export" style="color: #34d399;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
         </div>
     </header>
 
-    <!-- ================= TASTENSPERRE OVERLAY (Falls aktiv) ================= -->
-    <div id="lock-overlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex-col items-center justify-center text-center p-6 space-y-4">
-        <div class="p-4 bg-slate-900 border border-slate-800 rounded-full text-amber-400 animate-pulse">
-            <i data-lucide="lock" class="w-12 h-12"></i>
+    <!-- TASTENSPERRE OVERLAY -->
+    <div id="lock-overlay" class="hidden modal-overlay flex-col text-center" style="z-index: 35;">
+        <div style="background: #0f172a; padding: 1.5rem; border-radius: 50%; border: 1px solid #334155; color: #fbbf24; margin-bottom: 1rem;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
-        <div class="space-y-1">
-            <h2 class="text-lg font-bold text-slate-200">Tastensperre aktiv</h2>
-            <p class="text-xs text-slate-400 max-w-xs">Gesperrt gegen versehentliche Berührungen in der Tasche.</p>
-        </div>
-        <button onclick="toggleLock()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-semibold rounded-xl text-sm transition shadow-lg">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.25rem;">Tastensperre aktiv</h2>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1.5rem;">Gesperrt gegen versehentliche Berührungen in der Tasche.</p>
+        <button onclick="toggleLock()" style="background: #f59e0b; color: #020617; font-weight: 700; padding: 0.75rem 2rem; border-radius: 0.75rem; border: none; cursor: pointer;">
             Sperre aufheben
         </button>
     </div>
 
-    <!-- ================= HAUPTBEREICH: 2 GROSSE ZÄHLFLÄCHEN ================= -->
-    <main class="flex-1 flex flex-col md:flex-row p-2 gap-2 relative overflow-hidden safe-bottom">
+    <!-- MAIN COUNTER AREA -->
+    <main class="flex-1 flex flex-col safe-bottom" style="padding: 0.5rem; gap: 0.5rem;">
         
-        <!-- KAT-A ZÄHLFLÄCHE -->
-        <button id="btn-cat-a" onclick="registerClick('A')" 
-                class="relative flex-1 bg-gradient-to-br from-sky-950/90 to-slate-900 border-2 border-sky-600/40 active:border-sky-400 rounded-2xl flex flex-col items-center justify-between p-6 transition-all transform active:scale-[0.995] overflow-hidden group">
-            <!-- Optischer Blitz-Effekt -->
-            <div id="flash-a" class="absolute inset-0 bg-sky-400/20 pointer-events-none opacity-0"></div>
+        <!-- KATEGORIE A (BLAU) -->
+        <button id="btn-cat-a" onclick="registerClick('A')" class="counter-btn btn-cat-a">
+            <div id="flash-a" class="flash-overlay"></div>
             
-            <!-- Header Kategorie A -->
-            <div class="w-full flex justify-between items-start">
-                <div class="text-left">
-                    <span class="text-[10px] font-bold tracking-wider text-sky-400 uppercase bg-sky-950/80 border border-sky-800/50 px-2 py-0.5 rounded-md">Kategorie A</span>
-                    <h2 id="name-display-a" class="text-lg sm:text-xl font-bold text-slate-100 mt-1 truncate max-w-[200px]">Kategorie A</h2>
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="text-align: left;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #38bdf8; letter-spacing: 0.05em; background: rgba(8, 47, 73, 0.8); border: 1px solid rgba(3, 105, 161, 0.5); padding: 0.15rem 0.5rem; border-radius: 0.25rem; text-transform: uppercase;">Gruppe A</span>
+                    <h2 id="name-display-a" style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">Gruppe A</h2>
                 </div>
-                <div class="p-2 bg-sky-900/30 text-sky-300 rounded-xl border border-sky-800/30">
-                    <i data-lucide="plus-circle" class="w-6 h-6"></i>
-                </div>
-            </div>
-
-            <!-- Hauptzahl A -->
-            <div class="my-auto py-2 text-center">
-                <div id="count-display-a" class="text-7xl sm:text-8xl md:text-9xl font-black text-sky-200 tracking-tight tabular-nums drop-shadow-md">
-                    0
+                <div style="background: rgba(14, 116, 144, 0.3); color: #7dd3fc; padding: 0.5rem; border-radius: 0.75rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                 </div>
             </div>
 
-            <!-- Footer Kat A: Letzter Klick -->
-            <div class="w-full flex items-center justify-between text-xs text-sky-300/80 border-t border-sky-900/40 pt-3">
-                <span class="flex items-center space-x-1">
-                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                    <span>Zuletzt:</span>
-                </span>
-                <span id="last-click-a" class="font-mono font-medium text-sky-200">--:--:--</span>
+            <div style="margin: auto 0; text-align: center;">
+                <div id="count-display-a" class="tabular-nums" style="font-size: 5.5rem; font-weight: 900; color: #e0f2fe; line-height: 1;">0</div>
+            </div>
+
+            <div style="width: 100%; display: flex; justify-content: space-between; font-size: 0.75rem; color: #7dd3fc; border-top: 1px solid rgba(14, 116, 144, 0.3); padding-top: 0.5rem;">
+                <span>Zuletzt:</span>
+                <span id="last-click-a" class="tabular-nums" style="font-family: monospace; font-weight: 600;">--:--:--</span>
             </div>
         </button>
 
-        <!-- KAT-B ZÄHLFLÄCHE -->
-        <button id="btn-cat-b" onclick="registerClick('B')" 
-                class="relative flex-1 bg-gradient-to-br from-emerald-950/90 to-slate-900 border-2 border-emerald-600/40 active:border-emerald-400 rounded-2xl flex flex-col items-center justify-between p-6 transition-all transform active:scale-[0.995] overflow-hidden group">
-            <!-- Optischer Blitz-Effekt -->
-            <div id="flash-b" class="absolute inset-0 bg-emerald-400/20 pointer-events-none opacity-0"></div>
+        <!-- KATEGORIE B (ORANGE/BERNSTEIN) -->
+        <button id="btn-cat-b" onclick="registerClick('B')" class="counter-btn btn-cat-b">
+            <div id="flash-b" class="flash-overlay"></div>
             
-            <!-- Header Kategorie B -->
-            <div class="w-full flex justify-between items-start">
-                <div class="text-left">
-                    <span class="text-[10px] font-bold tracking-wider text-emerald-400 uppercase bg-emerald-950/80 border border-emerald-800/50 px-2 py-0.5 rounded-md">Kategorie B</span>
-                    <h2 id="name-display-b" class="text-lg sm:text-xl font-bold text-slate-100 mt-1 truncate max-w-[200px]">Kategorie B</h2>
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="text-align: left;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #fbbf24; letter-spacing: 0.05em; background: rgba(69, 26, 3, 0.8); border: 1px solid rgba(180, 83, 9, 0.5); padding: 0.15rem 0.5rem; border-radius: 0.25rem; text-transform: uppercase;">Gruppe B</span>
+                    <h2 id="name-display-b" style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">Gruppe B</h2>
                 </div>
-                <div class="p-2 bg-emerald-900/30 text-emerald-300 rounded-xl border border-emerald-800/30">
-                    <i data-lucide="plus-circle" class="w-6 h-6"></i>
-                </div>
-            </div>
-
-            <!-- Hauptzahl B -->
-            <div class="my-auto py-2 text-center">
-                <div id="count-display-b" class="text-7xl sm:text-8xl md:text-9xl font-black text-emerald-200 tracking-tight tabular-nums drop-shadow-md">
-                    0
+                <div style="background: rgba(180, 83, 9, 0.3); color: #fde047; padding: 0.5rem; border-radius: 0.75rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                 </div>
             </div>
 
-            <!-- Footer Kat B: Letzter Klick -->
-            <div class="w-full flex items-center justify-between text-xs text-emerald-300/80 border-t border-emerald-900/40 pt-3">
-                <span class="flex items-center space-x-1">
-                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                    <span>Zuletzt:</span>
-                </span>
-                <span id="last-click-b" class="font-mono font-medium text-emerald-200">--:--:--</span>
+            <div style="margin: auto 0; text-align: center;">
+                <div id="count-display-b" class="tabular-nums" style="font-size: 5.5rem; font-weight: 900; color: #fef3c7; line-height: 1;">0</div>
+            </div>
+
+            <div style="width: 100%; display: flex; justify-content: space-between; font-size: 0.75rem; color: #fde047; border-top: 1px solid rgba(180, 83, 9, 0.3); padding-top: 0.5rem;">
+                <span>Zuletzt:</span>
+                <span id="last-click-b" class="tabular-nums" style="font-family: monospace; font-weight: 600;">--:--:--</span>
             </div>
         </button>
 
     </main>
 
-    <!-- ================= MODAL: ZEITPROFIL & PROTOKOLL ================= -->
-    <div id="modal-analytics" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex items-center justify-center p-3 sm:p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+    <!-- MODAL: ZEITPROFIL & PROTOKOLL -->
+    <div id="modal-analytics" class="hidden modal-overlay">
+        <div class="modal-card">
+            <div style="padding: 1rem; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
                 <div class="flex items-center space-x-2">
-                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-sky-400"></i>
-                    <h3 class="font-bold text-slate-100 text-base">Zeitprofil & Protokoll</h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    <h3 style="font-weight: 700; color: #f8fafc; font-size: 1rem;">Zeitprofil & Protokoll</h3>
                 </div>
-                <button onclick="closeModal('modal-analytics')" class="p-1 rounded-lg text-slate-400 hover:bg-slate-800">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="closeModal('modal-analytics')" style="background: none; border: none; color: #94a3b8; cursor: pointer;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <!-- Modal Content (Scrollbar) -->
-            <div class="p-4 space-y-5 overflow-y-auto flex-1">
-                
-                <!-- Kachel-Statistiken -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div class="bg-slate-800/70 border border-slate-700/50 p-3 rounded-xl">
-                        <p class="text-[10px] text-slate-400 uppercase font-semibold truncate" id="stats-label-a">Kat A</p>
-                        <p class="text-xl font-bold text-sky-400 tabular-nums" id="stats-val-a">0</p>
-                        <p class="text-[10px] text-slate-500 tabular-nums" id="stats-pct-a">0%</p>
+            <div style="padding: 1rem; overflow-y: auto; flex: 1;" class="space-y-4">
+                <!-- Stat Kacheln -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                    <div style="background: #1e293b; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155;">
+                        <p id="stats-label-a" style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Kat A</p>
+                        <p id="stats-val-a" class="tabular-nums" style="font-size: 1.1rem; font-weight: 700; color: #38bdf8;">0</p>
+                        <p id="stats-pct-a" class="tabular-nums" style="font-size: 0.65rem; color: #64748b;">0%</p>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/50 p-3 rounded-xl">
-                        <p class="text-[10px] text-slate-400 uppercase font-semibold truncate" id="stats-label-b">Kat B</p>
-                        <p class="text-xl font-bold text-emerald-400 tabular-nums" id="stats-val-b">0</p>
-                        <p class="text-[10px] text-slate-500 tabular-nums" id="stats-pct-b">0%</p>
+                    <div style="background: #1e293b; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155;">
+                        <p id="stats-label-b" style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Kat B</p>
+                        <p id="stats-val-b" class="tabular-nums" style="font-size: 1.1rem; font-weight: 700; color: #fbbf24;">0</p>
+                        <p id="stats-pct-b" class="tabular-nums" style="font-size: 0.65rem; color: #64748b;">0%</p>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/50 p-3 rounded-xl">
-                        <p class="text-[10px] text-slate-400 uppercase font-semibold">Dauer</p>
-                        <p class="text-xl font-bold text-slate-200 tabular-nums" id="stats-val-duration">0m</p>
-                        <p class="text-[10px] text-slate-500">Gesamtzeit</p>
+                    <div style="background: #1e293b; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155;">
+                        <p style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Dauer</p>
+                        <p id="stats-val-duration" class="tabular-nums" style="font-size: 1.1rem; font-weight: 700; color: #f8fafc;">0m</p>
+                        <p style="font-size: 0.65rem; color: #64748b;">Gesamtzeit</p>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/50 p-3 rounded-xl">
-                        <p class="text-[10px] text-slate-400 uppercase font-semibold">Frequenz</p>
-                        <p class="text-xl font-bold text-amber-400 tabular-nums" id="stats-val-rate">0.0</p>
-                        <p class="text-[10px] text-slate-500">Klicks / Min</p>
+                    <div style="background: #1e293b; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155;">
+                        <p style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Rate</p>
+                        <p id="stats-val-rate" class="tabular-nums" style="font-size: 1.1rem; font-weight: 700; color: #34d399;">0.0</p>
+                        <p style="font-size: 0.65rem; color: #64748b;">Klicks/Min</p>
                     </div>
                 </div>
 
-                <!-- DIAGRAMM SEKTION -->
-                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-3">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <span class="text-xs font-semibold text-slate-300">Ereignisse über Zeitverlauf</span>
-                        
-                        <!-- Intervall-Wähler -->
-                        <div class="flex bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-xs">
-                            <button onclick="setChartInterval(10)" id="int-btn-10" class="px-2 py-0.5 rounded text-[11px] font-medium transition">10s</button>
-                            <button onclick="setChartInterval(60)" id="int-btn-60" class="px-2 py-0.5 rounded text-[11px] font-medium transition">1m</button>
-                            <button onclick="setChartInterval(300)" id="int-btn-300" class="px-2 py-0.5 rounded text-[11px] font-medium transition">5m</button>
-                            <button onclick="setChartInterval(900)" id="int-btn-900" class="px-2 py-0.5 rounded text-[11px] font-medium transition">15m</button>
-                        </div>
+                <!-- Ereignisliste -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="font-size: 0.8rem; font-weight: 600; color: #e2e8f0;">Protokollierte Klicks</h4>
+                        <span id="log-count-badge" style="font-size: 0.65rem; background: #1e293b; color: #94a3b8; padding: 0.15rem 0.5rem; border-radius: 1rem;">0 Einträge</span>
                     </div>
 
-                    <!-- SVG Chart Container -->
-                    <div id="chart-container" class="h-44 w-full relative flex items-center justify-center">
-                        <span class="text-xs text-slate-500">Noch keine Daten vorhanden</span>
-                    </div>
-
-                    <!-- Legende -->
-                    <div class="flex justify-center items-center space-x-6 text-[11px] text-slate-400 pt-1">
-                        <div class="flex items-center space-x-1.5">
-                            <span class="w-3 h-3 bg-sky-500 rounded-sm"></span>
-                            <span id="legend-label-a">Kategorie A</span>
-                        </div>
-                        <div class="flex items-center space-x-1.5">
-                            <span class="w-3 h-3 bg-emerald-500 rounded-sm"></span>
-                            <span id="legend-label-b">Kategorie B</span>
-                        </div>
+                    <div id="log-list-container" class="space-y-2" style="max-height: 240px; overflow-y: auto; padding-right: 2px;">
+                        <!-- Dynamischer Inhalt -->
                     </div>
                 </div>
-
-                <!-- CHRONOLOGISCHE EREIGNIS-LISTE -->
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <h4 class="text-xs font-semibold text-slate-300">Einzelne Ereignisse (neueste zuerst)</h4>
-                        <span id="log-count-badge" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">0 Einträge</span>
-                    </div>
-
-                    <div id="log-list-container" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                        <!-- Wird dynamisch gefüllt -->
-                        <p class="text-xs text-slate-500 text-center py-6">Keine Klicks registriert.</p>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
 
-    <!-- ================= MODAL: EXPORT & SETUP ================= -->
-    <div id="modal-settings" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex items-center justify-center p-3 sm:p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+    <!-- MODAL: EXPORT & SETUP -->
+    <div id="modal-settings" class="hidden modal-overlay">
+        <div class="modal-card">
+            <div style="padding: 1rem; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
                 <div class="flex items-center space-x-2">
-                    <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
-                    <h3 class="font-bold text-slate-100 text-base">Export & Setup</h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <h3 style="font-weight: 700; color: #f8fafc; font-size: 1rem;">Export & Setup</h3>
                 </div>
-                <button onclick="closeModal('modal-settings')" class="p-1 rounded-lg text-slate-400 hover:bg-slate-800">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="closeModal('modal-settings')" style="background: none; border: none; color: #94a3b8; cursor: pointer;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <!-- Modal Content (Scrollbar) -->
-            <div class="p-4 space-y-5 overflow-y-auto flex-1 text-xs">
-                
-                <!-- SITZUNGS- EINSTELLUNGEN -->
-                <div class="space-y-3 bg-slate-950 p-3.5 border border-slate-800 rounded-xl">
-                    <h4 class="font-semibold text-slate-200 text-xs">Sitzungskonfiguration</h4>
-                    
+            <div style="padding: 1rem; overflow-y: auto; flex: 1; font-size: 0.8rem;" class="space-y-4">
+                <!-- Sitzungs-Konfiguration -->
+                <div class="space-y-3" style="background: #020617; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #1e293b;">
+                    <h4 style="font-weight: 600; color: #f8fafc;">Sitzungskonfiguration</h4>
                     <div>
-                        <label class="block text-[11px] text-slate-400 mb-1">Sitzungsname (z. B. Proband / Ort / Welle)</label>
-                        <input type="text" id="input-session-name" onchange="saveSettings()"
-                               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500">
+                        <label style="display: block; color: #94a3b8; font-size: 0.7rem; margin-bottom: 0.25rem;">Sitzungsname / Beschreibung</label>
+                        <input type="text" id="input-session-name" onchange="saveSettings()">
                     </div>
-
-                    <div class="grid grid-cols-2 gap-2">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                         <div>
-                            <label class="block text-[11px] text-sky-400 mb-1">Bezeichnung Kategorie A</label>
-                            <input type="text" id="input-cat-a" onchange="saveSettings()"
-                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+                            <label style="display: block; color: #38bdf8; font-size: 0.7rem; margin-bottom: 0.25rem;">Bezeichnung Gruppe A</label>
+                            <input type="text" id="input-cat-a" onchange="saveSettings()">
                         </div>
                         <div>
-                            <label class="block text-[11px] text-emerald-400 mb-1">Bezeichnung Kategorie B</label>
-                            <input type="text" id="input-cat-b" onchange="saveSettings()"
-                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500">
+                            <label style="display: block; color: #fbbf24; font-size: 0.7rem; margin-bottom: 0.25rem;">Bezeichnung Gruppe B</label>
+                            <input type="text" id="input-cat-b" onchange="saveSettings()">
                         </div>
                     </div>
                 </div>
 
-                <!-- CSV EXPORT OPTIONEN -->
-                <div class="space-y-3 bg-slate-950 p-3.5 border border-slate-800 rounded-xl">
-                    <div class="flex items-center justify-between">
-                        <h4 class="font-semibold text-slate-200 text-xs">CSV-Datenexport</h4>
-                        <!-- Delimiter Switch -->
-                        <div class="flex items-center space-x-1.5 text-[11px] text-slate-400">
-                            <span>Trennzeichen:</span>
-                            <select id="select-delimiter" onchange="saveSettings()" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-slate-200 focus:outline-none">
-                                <option value=";">Semikolon ( ; ) - Excel DE</option>
-                                <option value=",">Komma ( , ) - R / Python</option>
-                            </select>
-                        </div>
+                <!-- CSV Export -->
+                <div class="space-y-3" style="background: #020617; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #1e293b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="font-weight: 600; color: #f8fafc;">CSV-Datenexport</h4>
+                        <select id="select-delimiter" onchange="saveSettings()" style="width: auto; padding: 0.2rem 0.4rem;">
+                            <option value=";">Semikolon ( ; ) - Excel DE</option>
+                            <option value=",">Komma ( , ) - R / Python</option>
+                        </select>
                     </div>
 
-                    <p class="text-slate-400 text-[11px]">
-                        Exportiert alle Klicks inklusive Millisekunden-Zeitstempel, ISO-Format und Zeitabständen (Deltas).
+                    <p style="color: #94a3b8; font-size: 0.7rem;">
+                        Enthält: Laufnummer, Gruppe, Counternummer_Gruppe, Datum, Uhrzeit, ISO-Zeitstempel & Sekunden seit Start.
                     </p>
 
-                    <!-- Export-Buttons -->
-                    <div class="space-y-2 pt-1">
-                        <button onclick="downloadCSV()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 font-bold rounded-xl flex items-center justify-center space-x-2 transition shadow-md">
-                            <i data-lucide="download" class="w-4 h-4"></i>
-                            <span>CSV Herunterladen</span>
-                        </button>
+                    <button onclick="downloadCSV()" style="width: 100%; background: #059669; color: #020617; font-weight: 700; padding: 0.6rem; border-radius: 0.75rem; border: none; cursor: pointer; display: flex; items-center: center; justify-content: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>CSV Herunterladen</span>
+                    </button>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="shareCSV()" class="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-xl text-slate-200 font-medium flex items-center justify-center space-x-1.5 transition">
-                                <i data-lucide="share-2" class="w-3.5 h-3.5 text-sky-400"></i>
-                                <span>iOS Teilen</span>
-                            </button>
-                            <button onclick="copyCSVToClipboard()" class="py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-700 rounded-xl text-slate-200 font-medium flex items-center justify-center space-x-1.5 transition">
-                                <i data-lucide="copy" class="w-3.5 h-3.5 text-amber-400"></i>
-                                <span>Kopieren</span>
-                            </button>
-                        </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <button onclick="shareCSV()" style="background: #1e293b; color: #f8fafc; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            <span>Teilen (iOS)</span>
+                        </button>
+                        <button onclick="copyCSVToClipboard()" style="background: #1e293b; color: #f8fafc; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Kopieren</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- GEFAHRENZONE (SITZUNG ZURÜCKSETZEN) -->
-                <div class="bg-rose-950/20 border border-rose-900/40 p-3.5 rounded-xl space-y-2">
-                    <h4 class="font-semibold text-rose-400 text-xs">Sitzungsdaten zurücksetzen</h4>
-                    <p class="text-slate-400 text-[11px]">Löscht alle gespeicherten Klicks dieser Sitzung unwiderruflich aus dem Browser-Speicher.</p>
-                    
-                    <button id="btn-reset-session" onclick="handleResetSession()" class="w-full py-2 bg-rose-950 hover:bg-rose-900 active:bg-rose-800 border border-rose-700/60 text-rose-200 font-semibold rounded-xl flex items-center justify-center space-x-1.5 transition">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <!-- Zurücksetzen -->
+                <div style="background: rgba(136, 19, 55, 0.2); border: 1px solid rgba(225, 29, 72, 0.4); padding: 0.75rem; border-radius: 0.75rem;" class="space-y-2">
+                    <h4 style="font-weight: 600; color: #fda4af;">Sitzungsdaten zurücksetzen</h4>
+                    <p style="color: #94a3b8; font-size: 0.7rem;">Löscht alle gespeicherten Klicks dieser Sitzung unwiderruflich.</p>
+                    <button id="btn-reset-session" onclick="handleResetSession()" style="width: 100%; background: #4c0519; color: #fecdd3; border: 1px solid #9f1239; font-weight: 600; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer;">
                         <span id="reset-btn-text">Alle Einträge löschen</span>
                     </button>
                 </div>
@@ -404,42 +416,31 @@
         </div>
     </div>
 
-    <!-- ================= TOAST BENACHRICHTIGUNGEN ================= -->
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-100 text-xs font-medium px-4 py-2.5 rounded-full shadow-xl transition-all opacity-0 pointer-events-none z-50 flex items-center space-x-2">
-        <i data-lucide="info" id="toast-icon" class="w-4 h-4 text-sky-400"></i>
+    <!-- TOAST BENACHRICHTIGUNGEN -->
+    <div id="toast" style="position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid #334155; color: #f8fafc; font-size: 0.75rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 50;">
         <span id="toast-text">Meldung</span>
     </div>
 
-    <!-- ================= JAVASCRIPT LOGIK ================= -->
+    <!-- JAVASCRIPT LOGIK -->
     <script>
-        // --- ANWENDUNGS-ZUSTAND (STATE) ---
         let appState = {
             sessionName: "Beobachtung_01",
-            catA: "Kategorie A",
-            catB: "Kategorie B",
+            catA: "Gruppe A",
+            catB: "Gruppe B",
             csvDelimiter: ";",
             isLocked: false,
-            wakeLockActive: false,
-            chartIntervalSec: 60 // Standard: 1 Minute
+            wakeLockActive: false
         };
 
-        // Liste aller erfassten Ereignisse
         let logs = [];
-        
-        // WakeLock Referenz
         let wakeLockObj = null;
-
-        // Zurücksetz-Bestätigungs-Zustand (2-stufig)
         let resetConfirmState = false;
         let resetTimer = null;
 
-        // --- INITIALISIERUNG BEIM START ---
         window.addEventListener('DOMContentLoaded', () => {
             loadFromLocalStorage();
             updateUI();
-            lucide.createIcons();
 
-            // Screen WakeLock bei Sichtbarkeitswechsel automatisch neu anfordern
             document.addEventListener("visibilitychange", async () => {
                 if (appState.wakeLockActive && wakeLockObj === null && document.visibilityState === "visible") {
                     await requestWakeLock(true);
@@ -447,7 +448,6 @@
             });
         });
 
-        // --- LOCAL STORAGE SPEICHERUNG ---
         function saveToLocalStorage() {
             localStorage.setItem('obs_klicker_settings', JSON.stringify({
                 sessionName: appState.sessionName,
@@ -464,37 +464,27 @@
                 try {
                     const parsed = JSON.parse(savedSettings);
                     appState.sessionName = parsed.sessionName || "Beobachtung_01";
-                    appState.catA = parsed.catA || "Kategorie A";
-                    appState.catB = parsed.catB || "Kategorie B";
+                    appState.catA = parsed.catA || "Gruppe A";
+                    appState.catB = parsed.catB || "Gruppe B";
                     appState.csvDelimiter = parsed.csvDelimiter || ";";
-                } catch(e) { console.error(e); }
+                } catch(e) {}
             }
 
             const savedLogs = localStorage.getItem('obs_klicker_logs');
             if (savedLogs) {
                 try {
                     logs = JSON.parse(savedLogs) || [];
-                } catch(e) { console.error(e); }
+                } catch(e) {}
             }
         }
 
-        // --- UMKERN-ZÄHLAKTION (KLICK-REGISTRIERUNG) ---
         function registerClick(catId) {
             if (appState.isLocked) return;
 
             const now = new Date();
             const unixMs = now.getTime();
             
-            // Zeitabstand zum letzten Klick insgesamt
-            const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
-            const deltaPrevMs = lastLog ? (unixMs - lastLog.unixMs) : 0;
-
-            // Zeitabstand zum letzten Klick derselben Kategorie
-            const lastSameCatLog = [...logs].reverse().find(l => l.categoryId === catId);
-            const deltaSameCatMs = lastSameCatLog ? (unixMs - lastSameCatLog.unixMs) : 0;
-
-            // Zeit-Strings formatieren
-            const pad = (num, len = 2) => String(num).padStart(len, '0');
+            const pad = (n, l = 2) => String(n).padStart(l, '0');
             const dateLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
             const timeLocal = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${pad(now.getMilliseconds(), 3)}`;
 
@@ -506,52 +496,42 @@
                 timestampIso: now.toISOString(),
                 dateLocal: dateLocal,
                 timeLocal: timeLocal,
-                unixMs: unixMs,
-                deltaPrevMs: deltaPrevMs,
-                deltaSameCatMs: deltaSameCatMs
+                unixMs: unixMs
             };
 
             logs.push(newEntry);
             saveToLocalStorage();
             updateUI();
 
-            // Optisches Blitz-Feedback auf der Zählfläche
             const flashEl = document.getElementById(catId === 'A' ? 'flash-a' : 'flash-b');
             if (flashEl) {
-                flashEl.classList.remove('animate-flash');
-                void flashEl.offsetWidth; // Reflow erzwingen
-                flashEl.classList.add('animate-flash');
+                flashEl.className = 'flash-overlay animate-flash-' + catId.toLowerCase();
+                setTimeout(() => { flashEl.className = 'flash-overlay'; }, 150);
             }
         }
 
-        // Letzten Klick rückgängig machen
         function undoLastClick() {
             if (logs.length === 0 || appState.isLocked) return;
             const popped = logs.pop();
             saveToLocalStorage();
             updateUI();
-            showToast(`Klick (${popped.categoryName}) rückgängig gemacht`, 'undo');
+            showToast(`Klick (${popped.categoryName}) rückgängig gemacht`);
         }
 
-        // Einzellnes Ereignis aus Modal-Liste löschen
         function deleteLogEntry(id) {
             logs = logs.filter(l => l.id !== id);
-            // Ids neu durchnummerieren
             logs.forEach((l, idx) => l.id = idx + 1);
             saveToLocalStorage();
             updateUI();
             renderAnalyticsModal();
-            showToast('Eintrag gelöscht', 'trash');
+            showToast('Eintrag gelöscht');
         }
 
-        // --- UI AKTUALISIERUNG ---
         function updateUI() {
-            // Zählerstände berechnen
             const countA = logs.filter(l => l.categoryId === 'A').length;
             const countB = logs.filter(l => l.categoryId === 'B').length;
             const total = logs.length;
 
-            // Displays
             document.getElementById('header-session-name').innerText = appState.sessionName;
             document.getElementById('header-total-count').innerText = total;
 
@@ -561,137 +541,72 @@
             document.getElementById('name-display-b').innerText = appState.catB;
             document.getElementById('count-display-b').innerText = countB;
 
-            // Letzte Klick-Zeiten
             const lastA = [...logs].reverse().find(l => l.categoryId === 'A');
             const lastB = [...logs].reverse().find(l => l.categoryId === 'B');
             document.getElementById('last-click-a').innerText = lastA ? lastA.timeLocal.split('.')[0] : '--:--:--';
             document.getElementById('last-click-b').innerText = lastB ? lastB.timeLocal.split('.')[0] : '--:--:--';
 
-            // Buttons aktivieren/deaktivieren
             document.getElementById('btn-undo').disabled = logs.length === 0;
 
-            // Inputs synchronisieren
             document.getElementById('input-session-name').value = appState.sessionName;
             document.getElementById('input-cat-a').value = appState.catA;
             document.getElementById('input-cat-b').value = appState.catB;
             document.getElementById('select-delimiter').value = appState.csvDelimiter;
         }
 
-        // --- TASTENSPERRE ---
         function toggleLock() {
             appState.isLocked = !appState.isLocked;
             const overlay = document.getElementById('lock-overlay');
-            const lockIcon = document.getElementById('icon-lock');
-            const lockBtn = document.getElementById('btn-lock');
-
             if (appState.isLocked) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
-                lockIcon.setAttribute('data-lucide', 'lock');
-                lockBtn.classList.add('text-amber-400', 'bg-amber-950/40');
             } else {
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
-                lockIcon.setAttribute('data-lucide', 'lock-open');
-                lockBtn.classList.remove('text-amber-400', 'bg-amber-950/40');
             }
-            lucide.createIcons();
         }
 
-        // --- WAKE LOCK (DISPLAY WACH HALTEN) ---
         async function toggleWakeLock() {
             if (!('wakeLock' in navigator)) {
-                showToast('Screen Wake Lock wird von diesem Browser nicht unterstützt', 'alert');
+                showToast('Screen Wake Lock im Browser nicht verfügbar');
                 return;
             }
 
             if (appState.wakeLockActive || wakeLockObj !== null) {
-                // Lock gezielt freigeben
                 appState.wakeLockActive = false;
                 if (wakeLockObj !== null) {
-                    try {
-                        await wakeLockObj.release();
-                    } catch (err) {
-                        // Fehler beim Freigeben ignorieren
-                    }
+                    try { await wakeLockObj.release(); } catch(e){}
                     wakeLockObj = null;
                 }
                 setWakeLockUI(false);
-                showToast('Bildschirm-Wachhalten deaktiviert', 'info');
+                showToast('Display-Wachhalten deaktiviert');
             } else {
-                // Lock anfordern
                 await requestWakeLock(false);
             }
         }
 
         async function requestWakeLock(isAutoRestore = false) {
-            // Vorab prüfen, ob die Permissions Policy (z. B. in einer iFrame-Vorschau) den Zugriff blockiert
-            if (document.featurePolicy && typeof document.featurePolicy.allowsFeature === 'function') {
-                if (!document.featurePolicy.allowsFeature('screen-wake-lock')) {
-                    appState.wakeLockActive = false;
-                    setWakeLockUI(false);
-                    if (!isAutoRestore) {
-                        showToast('Wachhalten in Vorschau blockiert – klappt direkt im Browser', 'alert');
-                    }
-                    return;
-                }
-            }
-
             try {
                 wakeLockObj = await navigator.wakeLock.request('screen');
                 appState.wakeLockActive = true;
                 setWakeLockUI(true);
-                if (!isAutoRestore) {
-                    showToast('Bildschirm bleibt wach', 'check');
-                }
-                wakeLockObj.addEventListener('release', () => {
-                    wakeLockObj = null;
-                    // Status nur zurücksetzen, wenn der Tab sichtbar ist oder der Nutzer es selbst deaktiviert hat
-                    if (!appState.wakeLockActive || document.visibilityState === 'visible') {
-                        appState.wakeLockActive = false;
-                        setWakeLockUI(false);
-                    }
-                });
+                if (!isAutoRestore) showToast('Display bleibt dauerhaft aktiv');
             } catch (err) {
                 wakeLockObj = null;
                 appState.wakeLockActive = false;
                 setWakeLockUI(false);
-
-                if (!isAutoRestore) {
-                    const msg = (err && err.message) ? err.message.toLowerCase() : '';
-                    if (err && (err.name === 'NotAllowedError' || msg.includes('permissions policy'))) {
-                        showToast('Wachhalten in Vorschau blockiert – klappt direkt im Browser', 'alert');
-                    } else {
-                        showToast('Bildschirm-Wachhalten konnte nicht aktiviert werden', 'alert');
-                    }
-                }
+                if (!isAutoRestore) showToast('Wachhalten in Vorschau blockiert (im echten Browser verfügbar)');
             }
         }
 
         function setWakeLockUI(active) {
             const badge = document.getElementById('badge-wakelock');
-            const icon = document.getElementById('icon-wakelock');
-            const btn = document.getElementById('btn-wakelock');
-            
-            if (active) {
-                badge.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block";
-                icon.setAttribute('data-lucide', 'sun');
-                btn.classList.add('text-amber-300');
-            } else {
-                badge.className = "w-2 h-2 rounded-full bg-slate-500 inline-block";
-                icon.setAttribute('data-lucide', 'sun-off');
-                btn.classList.remove('text-amber-300');
-            }
-            lucide.createIcons();
+            badge.style.background = active ? '#34d399' : '#64748b';
         }
 
-        // --- MODAL CONTROLLER ---
         function openModal(id) {
             document.getElementById(id).classList.remove('hidden');
-            if (id === 'modal-analytics') {
-                renderAnalyticsModal();
-            }
-            lucide.createIcons();
+            if (id === 'modal-analytics') renderAnalyticsModal();
         }
 
         function closeModal(id) {
@@ -700,20 +615,18 @@
 
         function saveSettings() {
             appState.sessionName = document.getElementById('input-session-name').value.trim() || "Beobachtung_01";
-            appState.catA = document.getElementById('input-cat-a').value.trim() || "Kategorie A";
-            appState.catB = document.getElementById('input-cat-b').value.trim() || "Kategorie B";
+            appState.catA = document.getElementById('input-cat-a').value.trim() || "Gruppe A";
+            appState.catB = document.getElementById('input-cat-b').value.trim() || "Gruppe B";
             appState.csvDelimiter = document.getElementById('select-delimiter').value;
             saveToLocalStorage();
             updateUI();
         }
 
-        // --- ZEITPROFIL & STATISTIK RENDERER ---
         function renderAnalyticsModal() {
             const countA = logs.filter(l => l.categoryId === 'A').length;
             const countB = logs.filter(l => l.categoryId === 'B').length;
             const total = logs.length;
 
-            // Kachelwerte
             document.getElementById('stats-label-a').innerText = appState.catA;
             document.getElementById('stats-val-a').innerText = countA;
             document.getElementById('stats-pct-a').innerText = total > 0 ? ((countA / total) * 100).toFixed(1) + '%' : '0%';
@@ -722,11 +635,6 @@
             document.getElementById('stats-val-b').innerText = countB;
             document.getElementById('stats-pct-b').innerText = total > 0 ? ((countB / total) * 100).toFixed(1) + '%' : '0%';
 
-            // Legende
-            document.getElementById('legend-label-a').innerText = appState.catA;
-            document.getElementById('legend-label-b').innerText = appState.catB;
-
-            // Dauer & Frequenz
             if (logs.length >= 2) {
                 const durationMs = logs[logs.length - 1].unixMs - logs[0].unixMs;
                 const durationMin = Math.max(durationMs / 60000, 0.01);
@@ -740,186 +648,91 @@
                 document.getElementById('stats-val-rate').innerText = '0.0';
             }
 
-            // Intervall Buttons Highlighten
-            [10, 60, 300, 900].forEach(sec => {
-                const btn = document.getElementById(`int-btn-${sec}`);
-                if (sec === appState.chartIntervalSec) {
-                    btn.className = "px-2 py-0.5 rounded text-[11px] font-medium transition bg-sky-600 text-slate-100";
-                } else {
-                    btn.className = "px-2 py-0.5 rounded text-[11px] font-medium transition text-slate-400 hover:text-slate-200";
-                }
-            });
-
-            // Chart Zeichnen
-            renderChartSVG();
-
-            // Ereignisliste füllen
             renderLogList();
         }
 
-        function setChartInterval(sec) {
-            appState.chartIntervalSec = sec;
-            renderAnalyticsModal();
-        }
-
-        // SVG Zeitverlaufs-Balkendiagramm Generierung
-        function renderChartSVG() {
-            const container = document.getElementById('chart-container');
-            if (logs.length === 0) {
-                container.innerHTML = `<span class="text-xs text-slate-500">Noch keine Daten vorhanden</span>`;
-                return;
-            }
-
-            const intervalMs = appState.chartIntervalSec * 1000;
-            const startMs = logs[0].unixMs;
-            const endMs = logs[logs.length - 1].unixMs;
-
-            // Falls alle Klicks im selben Millisekundenbereich liegen
-            const timeSpan = Math.max(endMs - startMs, intervalMs);
-            const numBuckets = Math.max(Math.ceil(timeSpan / intervalMs), 1);
-
-            // Buckets initialisieren
-            let buckets = [];
-            for (let i = 0; i < numBuckets; i++) {
-                buckets.push({
-                    start: startMs + (i * intervalMs),
-                    countA: 0,
-                    countB: 0
-                });
-            }
-
-            // Klicks einsortieren
-            logs.forEach(l => {
-                let idx = Math.floor((l.unixMs - startMs) / intervalMs);
-                if (idx >= numBuckets) idx = numBuckets - 1;
-                if (idx < 0) idx = 0;
-                if (l.categoryId === 'A') buckets[idx].countA++;
-                else buckets[idx].countB++;
-            });
-
-            // Maximalwert für Skalierung finden
-            const maxVal = Math.max(...buckets.map(b => b.countA + b.countB), 1);
-
-            // SVG Abmessungen
-            const width = container.clientWidth || 500;
-            const height = 176;
-            const paddingBottom = 24;
-            const chartHeight = height - paddingBottom;
-            const barWidth = Math.max((width / numBuckets) - 4, 3);
-
-            let svgContent = `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" class="overflow-visible">`;
-
-            // Horizontale Hilfslinien
-            svgContent += `<line x1="0" y1="${chartHeight}" x2="${width}" y2="${chartHeight}" stroke="#334155" stroke-width="1"/>`;
-            svgContent += `<line x1="0" y1="${chartHeight / 2}" x2="${width}" y2="${chartHeight / 2}" stroke="#1e293b" stroke-dasharray="4 4"/>`;
-
-            // Balken zeichnen
-            buckets.forEach((b, i) => {
-                const x = (i * (width / numBuckets)) + ((width / numBuckets - barWidth) / 2);
-                
-                const heightA = (b.countA / maxVal) * (chartHeight - 10);
-                const heightB = (b.countB / maxVal) * (chartHeight - 10);
-
-                const yB = chartHeight - heightB;
-                const yA = yB - heightA;
-
-                // Kat B (Grün) unten
-                if (b.countB > 0) {
-                    svgContent += `<rect x="${x}" y="${yB}" width="${barWidth}" height="${heightB}" fill="#059669" rx="1" />`;
-                }
-                // Kat A (Blau) gestapelt darüber
-                if (b.countA > 0) {
-                    svgContent += `<rect x="${x}" y="${yA}" width="${barWidth}" height="${heightA}" fill="#0284c7" rx="1" />`;
-                }
-
-                // Zeit-Beschriftung für ausgewählte Balken
-                if (numBuckets <= 10 || i % Math.ceil(numBuckets / 6) === 0) {
-                    const d = new Date(b.start);
-                    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-                    svgContent += `<text x="${x + barWidth/2}" y="${height - 6}" font-size="9" fill="#64748b" text-anchor="middle font-mono">${timeStr}</text>`;
-                }
-            });
-
-            svgContent += `</svg>`;
-            container.innerHTML = svgContent;
-        }
-
-        // Chronologische Log-Liste rendern
         function renderLogList() {
             const container = document.getElementById('log-list-container');
             document.getElementById('log-count-badge').innerText = `${logs.length} Einträge`;
 
             if (logs.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Keine Klicks registriert.</p>`;
+                container.innerHTML = `<p style="font-size: 0.75rem; color: #64748b; text-align: center; padding: 1.5rem 0;">Keine Klicks registriert.</p>`;
                 return;
             }
 
+            // Berechnen der kumulativen Gruppen-Zählerstände
+            let groupCounters = { A: 0, B: 0 };
+            const computedLogs = logs.map(l => {
+                groupCounters[l.categoryId]++;
+                return { ...l, groupCounter: groupCounters[l.categoryId] };
+            });
+
             let html = '';
-            // Neueste zuerst
-            const reversed = [...logs].reverse();
+            const reversed = [...computedLogs].reverse();
 
             reversed.forEach(l => {
                 const isA = l.categoryId === 'A';
-                const badgeColor = isA ? 'bg-sky-950 text-sky-400 border-sky-800' : 'bg-emerald-950 text-emerald-400 border-emerald-800';
+                const badgeStyle = isA 
+                    ? 'background: rgba(8, 47, 73, 0.8); color: #38bdf8; border: 1px solid rgba(3, 105, 161, 0.5);'
+                    : 'background: rgba(69, 26, 3, 0.8); color: #fbbf24; border: 1px solid rgba(180, 83, 9, 0.5);';
 
                 html += `
-                    <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-xl text-xs">
-                        <div class="flex items-center space-x-2.5 overflow-hidden">
-                            <span class="font-mono text-[10px] text-slate-500 w-6">#${l.id}</span>
-                            <span class="text-[10px] px-2 py-0.5 rounded-md border font-semibold ${badgeColor} truncate max-w-[110px]">
-                                ${l.categoryName}
+                    <div style="background: #020617; border: 1px solid #1e293b; padding: 0.5rem; border-radius: 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+                        <div class="flex items-center space-x-2" style="overflow: hidden;">
+                            <span style="font-family: monospace; color: #64748b; width: 28px;">#${l.id}</span>
+                            <span style="font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 0.25rem; ${badgeStyle} font-family: monospace;">
+                                ${l.categoryName} (#${l.groupCounter})
                             </span>
-                            <span class="font-mono text-slate-200 text-[11px]">${l.timeLocal}</span>
+                            <span style="font-family: monospace; color: #e2e8f0;">${l.timeLocal}</span>
                         </div>
-                        <div class="flex items-center space-x-3">
-                            <span class="text-[10px] font-mono text-slate-500 hidden sm:inline">+${(l.deltaPrevMs / 1000).toFixed(1)}s</span>
-                            <button onclick="deleteLogEntry(${l.id})" class="text-slate-500 hover:text-rose-400 p-1 transition">
-                                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
+                        <button onclick="deleteLogEntry(${l.id})" style="background: none; border: none; color: #64748b; cursor: pointer; padding: 0.2rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                     </div>
                 `;
             });
 
             container.innerHTML = html;
-            lucide.createIcons();
         }
 
-        // --- CSV GENERATOR ---
+        // CSV GENERATOR (INKLUSIVE COUNTERNUMMER DER GRUPPE)
         function generateCSVString() {
             const delim = appState.csvDelimiter;
+            let csv = '\uFEFF'; // UTF-8 BOM für Excel
             
-            // UTF-8 BOM für exzellente Kompatibilität mit Excel
-            let csv = '\uFEFF';
-            
-            // Header
             const headers = [
                 "Laufnummer",
                 "Sitzung",
                 "Kategorie_ID",
                 "Kategorie_Name",
+                "Counternummer_Gruppe",
                 "Datum",
                 "Uhrzeit_Lokal",
                 "Zeitstempel_ISO",
                 "Unix_ms",
-                "Intervall_Gesamt_ms",
-                "Intervall_Kategorie_ms"
+                "Sekunden_seit_Start"
             ];
             csv += headers.join(delim) + '\n';
 
-            // Datenzeilen
+            let groupCounters = { A: 0, B: 0 };
+            const startMs = logs.length > 0 ? logs[0].unixMs : 0;
+
             logs.forEach(l => {
+                groupCounters[l.categoryId]++;
+                const groupCount = groupCounters[l.categoryId];
+                const secondsFromStart = ((l.unixMs - startMs) / 1000).toFixed(3);
+
                 const row = [
                     l.id,
                     `"${l.sessionName.replace(/"/g, '""')}"`,
                     `"${l.categoryId}"`,
                     `"${l.categoryName.replace(/"/g, '""')}"`,
+                    groupCount,
                     `"${l.dateLocal}"`,
                     `"${l.timeLocal}"`,
                     `"${l.timestampIso}"`,
                     l.unixMs,
-                    l.deltaPrevMs,
-                    l.deltaSameCatMs
+                    secondsFromStart
                 ];
                 csv += row.join(delim) + '\n';
             });
@@ -929,15 +742,14 @@
 
         function getFileName() {
             const now = new Date();
-            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
             const cleanSession = appState.sessionName.replace(/[^a-z0-9_-]/gi, '_');
             return `${cleanSession}_${dateStr}.csv`;
         }
 
-        // Download Optionen
         function downloadCSV() {
             if (logs.length === 0) {
-                showToast('Keine Daten zum Exportieren vorhanden', 'alert');
+                showToast('Keine Daten zum Exportieren vorhanden');
                 return;
             }
             const csvData = generateCSVString();
@@ -951,19 +763,16 @@
             link.click();
             document.body.removeChild(link);
             
-            showToast('CSV-Datei heruntergeladen', 'check');
+            showToast('CSV-Datei heruntergeladen');
         }
 
-        // iOS Share Sheet (Web Share API)
         async function shareCSV() {
             if (logs.length === 0) {
-                showToast('Keine Daten zum Teilen vorhanden', 'alert');
+                showToast('Keine Daten zum Teilen vorhanden');
                 return;
             }
-
             const csvData = generateCSVString();
-            const fileName = getFileName();
-            const file = new File([csvData], fileName, { type: 'text/csv' });
+            const file = new File([csvData], getFileName(), { type: 'text/csv' });
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
@@ -972,32 +781,26 @@
                         title: 'Observationsdaten Export',
                         text: `CSV-Export für Sitzung ${appState.sessionName}`
                     });
-                    showToast('Erfolgreich geteilt', 'check');
+                    showToast('Erfolgreich geteilt');
                 } catch (err) {
-                    if (err.name !== 'AbortError') {
-                        showToast('Teilen fehlgeschlagen', 'alert');
-                    }
+                    if (err.name !== 'AbortError') showToast('Teilen fehlgeschlagen');
                 }
             } else {
-                // Fallback: In Zwischenablage kopieren
                 copyCSVToClipboard();
             }
         }
 
-        // In Zwischenablage kopieren
         function copyCSVToClipboard() {
             if (logs.length === 0) {
-                showToast('Keine Daten zum Kopieren vorhanden', 'alert');
+                showToast('Keine Daten zum Kopieren vorhanden');
                 return;
             }
             const csvData = generateCSVString();
             
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(csvData).then(() => {
-                    showToast('CSV in Zwischenablage kopiert', 'copy');
-                }).catch(() => {
-                    fallbackCopyText(csvData);
-                });
+                    showToast('CSV in Zwischenablage kopiert');
+                }).catch(() => fallbackCopyText(csvData));
             } else {
                 fallbackCopyText(csvData);
             }
@@ -1012,77 +815,43 @@
             textArea.select();
             try {
                 document.execCommand('copy');
-                showToast('CSV in Zwischenablage kopiert', 'copy');
+                showToast('CSV in Zwischenablage kopiert');
             } catch (err) {
-                showToast('Kopieren fehlgeschlagen', 'alert');
+                showToast('Kopieren fehlgeschlagen');
             }
             document.body.removeChild(textArea);
         }
 
-        // --- ZWEISTUFIGES RESET FOR DELETION ---
         function handleResetSession() {
             const textEl = document.getElementById('reset-btn-text');
-            const btnEl = document.getElementById('btn-reset-session');
 
             if (!resetConfirmState) {
-                // Stufe 1: Sicherheitsabfrage aktivieren
                 resetConfirmState = true;
-                textEl.innerText = "Wirklich LÖSCHEN? (Hier tippen)";
-                btnEl.className = "w-full py-2 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-slate-950 font-bold rounded-xl flex items-center justify-center space-x-1.5 transition animate-pulse";
-                
-                // Auto-Reset nach 4 Sekunden
-                resetTimer = setTimeout(() => {
-                    cancelResetState();
-                }, 4000);
+                textEl.innerText = "Wirklich LÖSCHEN? (Nochmals tippen)";
+                resetTimer = setTimeout(() => { cancelResetState(); }, 4000);
             } else {
-                // Stufe 2: Ausführen
                 clearTimeout(resetTimer);
                 logs = [];
                 saveToLocalStorage();
                 updateUI();
                 cancelResetState();
                 closeModal('modal-settings');
-                showToast('Sitzung erfolgreich zurückgesetzt', 'trash');
+                showToast('Sitzung zurückgesetzt');
             }
         }
 
         function cancelResetState() {
             resetConfirmState = false;
             const textEl = document.getElementById('reset-btn-text');
-            const btnEl = document.getElementById('btn-reset-session');
-            if (textEl && btnEl) {
-                textEl.innerText = "Alle Einträge löschen";
-                btnEl.className = "w-full py-2 bg-rose-950 hover:bg-rose-900 active:bg-rose-800 border border-rose-700/60 text-rose-200 font-semibold rounded-xl flex items-center justify-center space-x-1.5 transition";
-            }
+            if (textEl) textEl.innerText = "Alle Einträge löschen";
         }
 
-        // --- TOAST NOTIFICATION SYSTEM ---
-        function showToast(msg, iconType = 'info') {
+        function showToast(msg) {
             const toast = document.getElementById('toast');
             const toastText = document.getElementById('toast-text');
-            const toastIcon = document.getElementById('toast-icon');
-
-            let iconName = 'info';
-            let iconColor = 'text-sky-400';
-
-            if (iconType === 'check') { iconName = 'check-circle-2'; iconColor = 'text-emerald-400'; }
-            else if (iconType === 'undo') { iconName = 'undo-2'; iconColor = 'text-amber-400'; }
-            else if (iconType === 'trash') { iconName = 'trash-2'; iconColor = 'text-rose-400'; }
-            else if (iconType === 'copy') { iconName = 'copy'; iconColor = 'text-sky-400'; }
-            else if (iconType === 'alert') { iconName = 'alert-circle'; iconColor = 'text-amber-400'; }
-
-            toastIcon.setAttribute('data-lucide', iconName);
-            toastIcon.className = `w-4 h-4 ${iconColor}`;
             toastText.innerText = msg;
-            lucide.createIcons();
-
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 2500);
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
         }
     </script>
 </body>
